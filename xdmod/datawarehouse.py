@@ -158,6 +158,8 @@ class DataWareHouse:
         }
 
         response = self.get_usagedata(config)
+        print(response)
+
 
         csvdata = csv.reader(response.splitlines())
 
@@ -246,6 +248,102 @@ class DataWareHouse:
         get_body = b_obj.getvalue()
 
         return get_body.decode('utf8')
+
+    def getjobs(self, start_date, end_date, count=50,start=0):
+
+        config = {
+            'realm': 'SUPREMM',
+            'start_date': start_date,
+            'end_date': end_date,
+            'params': json.dumps({"resource":["1"]}),  
+            'limit': count,
+            'start': start
+        }
+
+        self.crl.setopt(pycurl.URL, self.xdmodhost + '/rest/v1/warehouse/search/jobs?' + urlencode(config))
+
+        b_obj = io.BytesIO()
+        self.crl.setopt(pycurl.WRITEDATA, b_obj)
+        self.crl.setopt(pycurl.HTTPHEADER, self.headers)
+        self.crl.setopt(pycurl.HTTPGET, 1)
+        self.crl.perform()
+
+        get_body = b_obj.getvalue()
+
+        code = self.crl.getinfo(pycurl.RESPONSE_CODE)
+        if code != 200:
+           raise RuntimeError('Error ' + str(code) + ' ' + get_body.decode('utf8'))
+
+        result = json.loads(get_body.decode('utf8'))
+
+        totalCount = count
+
+        if 'totalCount' in result:
+            totalCount = int(result['totalCount'])
+
+        jobids = []
+
+        for resdata in result['results']:
+            jobids.append(resdata['jobid'])
+
+        return totalCount,jobids
+
+    def jobaccountingdata(self,jobid):
+        
+        config = {
+            'realm': 'SUPREMM',
+            'jobid': jobid
+            }
+
+        self.crl.setopt(pycurl.URL, self.xdmodhost + '/rest/v1/warehouse/search/jobs/accounting?' + urlencode(config))
+
+        b_obj = io.BytesIO()
+        self.crl.setopt(pycurl.WRITEDATA, b_obj)
+        self.crl.setopt(pycurl.HTTPHEADER, self.headers)
+        self.crl.setopt(pycurl.HTTPGET, 1)
+        self.crl.perform()
+
+        get_body = b_obj.getvalue()
+
+        code = self.crl.getinfo(pycurl.RESPONSE_CODE)
+        if code != 200:
+           raise RuntimeError('Error ' + str(code) + ' ' + get_body.decode('utf8'))
+
+        result = json.loads(get_body.decode('utf8'))
+
+        data = dict()
+
+        resdata = result['data']
+
+        for keyvalpair in resdata:
+            data[keyvalpair['key']] = keyvalpair['value']
+
+        return data
+
+    def jobperformancedata(self,jobid):
+        
+        config = {
+            'realm': 'SUPREMM',
+            'jobid': jobid,
+            }
+
+        self.crl.setopt(pycurl.URL, self.xdmodhost + '/rest/v1/warehouse/search/jobs/detailedmetrics?' + urlencode(config))
+
+        b_obj = io.BytesIO()
+        self.crl.setopt(pycurl.WRITEDATA, b_obj)
+        self.crl.setopt(pycurl.HTTPHEADER, self.headers)
+        self.crl.setopt(pycurl.HTTPGET, 1)
+        self.crl.perform()
+
+        get_body = b_obj.getvalue()
+
+        code = self.crl.getinfo(pycurl.RESPONSE_CODE)
+        if code != 200:
+           raise RuntimeError('Error ' + str(code) + ' ' + get_body.decode('utf8'))
+
+        result = json.loads(get_body.decode('utf8'))
+
+        return result
 
     def rawdata(self, realm, start, end, filters, stats):
 
