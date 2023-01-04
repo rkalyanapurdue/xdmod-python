@@ -255,7 +255,7 @@ class DataWareHouse:
             'realm': 'SUPREMM',
             'start_date': start_date,
             'end_date': end_date,
-            'params': json.dumps({"resource":["1"]}),  
+            'params': json.dumps({"resource":["1"]}),
             'limit': count,
             'start': start
         }
@@ -292,7 +292,9 @@ class DataWareHouse:
         
         config = {
             'realm': 'SUPREMM',
-            'jobid': jobid
+            'jobid': jobid,
+            'recordid': 8,
+            'infoid': 0
             }
 
         self.crl.setopt(pycurl.URL, self.xdmodhost + '/rest/v1/warehouse/search/jobs/accounting?' + urlencode(config))
@@ -325,9 +327,11 @@ class DataWareHouse:
         config = {
             'realm': 'SUPREMM',
             'jobid': jobid,
+            'recordid': 8,
+            'infoid': 0
             }
 
-        self.crl.setopt(pycurl.URL, self.xdmodhost + '/rest/v1/warehouse/search/jobs/detailedmetrics?' + urlencode(config))
+        self.crl.setopt(pycurl.URL, self.xdmodhost + '/rest/v1/warehouse/search/jobs/accounting?' + urlencode(config))
 
         b_obj = io.BytesIO()
         self.crl.setopt(pycurl.WRITEDATA, b_obj)
@@ -343,7 +347,14 @@ class DataWareHouse:
 
         result = json.loads(get_body.decode('utf8'))
 
-        return result
+        data = dict()
+
+        resdata = result['data']
+
+        for keyvalpair in resdata:
+            data[keyvalpair['key']] = keyvalpair['value']
+
+        return data
 
     def rawdata(self, realm, start, end, filters, stats):
 
