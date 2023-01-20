@@ -327,11 +327,9 @@ class DataWareHouse:
         config = {
             'realm': 'SUPREMM',
             'jobid': jobid,
-            'recordid': 8,
-            'infoid': 0
             }
 
-        self.crl.setopt(pycurl.URL, self.xdmodhost + '/rest/v1/warehouse/search/jobs/accounting?' + urlencode(config))
+        self.crl.setopt(pycurl.URL, self.xdmodhost + '/rest/v1/warehouse/search/jobs/detailedmetrics?' + urlencode(config))
 
         b_obj = io.BytesIO()
         self.crl.setopt(pycurl.WRITEDATA, b_obj)
@@ -347,14 +345,107 @@ class DataWareHouse:
 
         result = json.loads(get_body.decode('utf8'))
 
-        data = dict()
+        return result
 
-        resdata = result['data']
+    def jobhostdata(self,jobid):
+        
+        config = {
+            'realm': 'SUPREMM',
+            'jobid': jobid,
+            }
 
-        for keyvalpair in resdata:
-            data[keyvalpair['key']] = keyvalpair['value']
+        self.crl.setopt(pycurl.URL, self.xdmodhost + '/rest/v1/warehouse/search/jobs/executable?' + urlencode(config))
 
-        return data
+        b_obj = io.BytesIO()
+        self.crl.setopt(pycurl.WRITEDATA, b_obj)
+        self.crl.setopt(pycurl.HTTPHEADER, self.headers)
+        self.crl.setopt(pycurl.HTTPGET, 1)
+        self.crl.perform()
+
+        get_body = b_obj.getvalue()
+
+        code = self.crl.getinfo(pycurl.RESPONSE_CODE)
+        if code != 200:
+           raise RuntimeError('Error ' + str(code) + ' ' + get_body.decode('utf8'))
+
+        result = json.loads(get_body.decode('utf8'))
+
+        #determine the hosts
+        hosts = []
+        for row in result:
+            if 'children' in row:
+                for tree1 in row['children']:
+                    if 'children' in tree1:
+                        for tree2 in tree1['children']:
+                            if 'key' in tree2:
+                                if 'node' in tree2['key']:
+                                    if 'children' in tree2:
+                                        for tree3 in tree2['children']:
+                                            if 'key' in tree3:
+                                                if tree3['key'] == 'node':
+                                                    hosts.append(tree3['value'])
+
+        return hosts
+
+    def jobtimeseries(self,jobid):
+       
+        metrics = ['cpuuser', 'membw', 'simdins', 'gpu_usage', 'clktks', 'memused_minus_diskcache', 'power', 'memused', 'process_mem_usage', 'ib_lnet', 'lnet', 'block', 'nfs']
+
+        results = dict()
+
+        results['jobid'] = jobid.rstrip()
+
+        results['data'] = []
+
+        for metric in metrics:
+            config = {
+                'realm': 'SUPREMM',
+                'jobid': jobid.rstrip(),
+                'tsid': metric
+                }
+
+            self.crl.setopt(pycurl.URL, self.xdmodhost + '/rest/v1/warehouse/search/jobs/timeseries?' + urlencode(config))
+
+            b_obj = io.BytesIO()
+            self.crl.setopt(pycurl.WRITEDATA, b_obj)
+            self.crl.setopt(pycurl.HTTPHEADER, self.headers)
+            self.crl.setopt(pycurl.HTTPGET, 1)
+            self.crl.perform()
+
+            get_body = b_obj.getvalue()
+
+            code = self.crl.getinfo(pycurl.RESPONSE_CODE)
+            if code != 200:
+                return results
+               #raise RuntimeError('Error ' + str(code) + ' ' + get_body.decode('utf8'))
+
+            res = json.loads(get_body.decode('utf8'))
+
+            #determine the time series data for this metric
+            if 'data' in res:
+                for data in res['data']:
+                    # assuming only one value in the data array
+                    if 'series' in data:
+                        host_data = dict()
+                        for host in data['series']:
+                            host_data[host['name']] = host['data']
+                        result = dict()
+                        result['metric'] = metric
+                        result['units'] = data['schema']['units']
+                        result['data'] = host_data
+                        results['data'].append(result)
+
+        return results
+
+    def rawdata(self, realm, start, end, filters, stats):
+
+        config = {
+            'realm': realm,
+            'start_date': start,
+            'end_date': end,
+            'params': filters,
+            'stats': stats
+        }
 
     def rawdata(self, realm, start, end, filters, stats):
 
