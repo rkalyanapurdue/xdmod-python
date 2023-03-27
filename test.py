@@ -32,7 +32,7 @@ def get_jobids():
 def get_jobaccounting():
 
     with open('job_accounting_nov.csv','w') as csvfile:
-        fieldnames = ['Account','Job Id','Shared','Cores','Gpus','Nodes','Cpu Time','Node Time','Requested Nodes','Requested Wall Time','Queue','Wait Time','Wall Time','Eligible Time','End Time','Start Time','Submit Time','User','Exit Status']
+        fieldnames = ['Account','Job Id','Shared','Cores','Gpus','Nodes','Cpu Time','Node Time','Requested Nodes','Requested Wall Time','Queue','Wait Time','Wall Time','Eligible Time','End Time','Start Time','Submit Time','User','Exit Status','Hosts','Job Name']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames,extrasaction='ignore')
         writer.writeheader()
         with open('jobids-nov.txt','r') as jobidfile:
@@ -42,6 +42,7 @@ def get_jobaccounting():
                 #map(res.pop,['Total Cores Available','Local Job Id','Name','Organization','Resource','Hierarchy Bottom Level','PI','PI Institution','Timezone','User Institution','Username','Application','Executable','Working directory'])
 
                 res['Job Id'] = jobid
+                res['Job Name'] = res['Name']
 
                 writer.writerow(res)
 

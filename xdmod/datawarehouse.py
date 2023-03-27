@@ -320,6 +320,10 @@ class DataWareHouse:
         for keyvalpair in resdata:
             data[keyvalpair['key']] = keyvalpair['value']
 
+        #fetch the hosts that this job ran on
+        job_hosts = self.jobhostdata(jobid)
+        data['Hosts'] = ','.join(job_hosts)
+
         return data
 
     def jobperformancedata(self,jobid):
